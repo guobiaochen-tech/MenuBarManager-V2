@@ -1,0 +1,15 @@
+# Build
+.build/
+
+# App bundle
+MenuBarManager-V2.app/
+
+# Binary
+test-ax
+
+# Icons (large)
+AppIcon.icns
+AppIcon.iconset/
+
+# macOS
+.DS_Store
