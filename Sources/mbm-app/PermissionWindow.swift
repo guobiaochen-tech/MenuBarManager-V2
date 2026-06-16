@@ -1,5 +1,6 @@
 import AppKit
 import CoreGraphics
+import ScreenCaptureKit
 
 // MARK: - 权限检测
 
@@ -21,7 +22,34 @@ enum PermissionChecker {
     }
 
     static func openScreenRecording() {
-        CGRequestScreenCaptureAccess()
+        // 苹果给录屏的系统授权弹窗只能弹第一次，之后再点不再弹出（这点绕不过）。
+        // 为了和辅助功能「点一下就跳出窗」一致，这里每次点击都自己弹一个引导窗，
+        // 用户点「打开设置」后再跳到系统设置「屏幕录制」页。
+        let alert = NSAlert()
+        alert.messageText = "需要屏幕录制权限"
+        alert.informativeText = "开启后才能截取并显示菜单栏里被隐藏的图标。\n请到「系统设置 → 隐私与安全性 → 屏幕录制」找到 MenuBarManager 并打开开关。"
+        alert.alertStyle = .informational
+        alert.addButton(withTitle: "打开设置")
+        alert.addButton(withTitle: "取消")
+
+        guard alert.runModal() == .alertFirstButtonReturn else { return }
+
+        // 触发系统把本 app 注册进屏幕录制授权列表（设置页里才看得到、才能勾选）。
+        // macOS 15+ 起 CGRequestScreenCaptureAccess() 已失效，改用 ScreenCaptureKit 触发。
+        requestScreenCapturePermission()
+
+        if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture") {
+            NSWorkspace.shared.open(url)
+        }
+    }
+
+    /// 触发屏幕录制权限请求/注册。macOS 15+ 用 ScreenCaptureKit，低版本用老接口。
+    private static func requestScreenCapturePermission() {
+        if #available(macOS 15.0, *) {
+            SCShareableContent.getWithCompletionHandler { _, _ in }
+        } else {
+            CGRequestScreenCaptureAccess()
+        }
     }
 }
 
